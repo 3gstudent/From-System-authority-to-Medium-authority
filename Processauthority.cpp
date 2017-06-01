@@ -39,7 +39,7 @@ int main()
 		printf("%-20s	%4d	",pinfo.szExeFile,pinfo.th32ProcessID); 
 		hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pinfo.th32ProcessID);
 		bRunAsAdmin = IsRunasAdmin(hProcess);  
-		if ( bRunAsAdmin )  
+		if (bRunAsAdmin)  
 			printf("%-12s\n","Yes");  
 		else
 			printf("\n");

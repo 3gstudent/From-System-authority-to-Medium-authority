@@ -8,7 +8,7 @@
 #include "stdafx.h"
 
 #include <windows.h>
-
+#pragma comment(lib,"advapi32.lib")
 void DisplayErrorMessage(LPTSTR pszMessage, DWORD dwLastError)
 {
 	HLOCAL hlErrorMessage = NULL;

@@ -6,46 +6,72 @@
 
 #include <windows.h>  
 #include <TlHelp32.h>  
-BOOL IsRunasAdmin(HANDLE hProcess)  
-{  
-    BOOL bElevated = FALSE;    
-    HANDLE hToken = NULL;    
-    if (!OpenProcessToken(hProcess,TOKEN_QUERY,&hToken))  
-        return FALSE;   
-    TOKEN_ELEVATION tokenEle;  
-    DWORD dwRetLen = 0;    
-    if ( GetTokenInformation(hToken,TokenElevation,&tokenEle,sizeof(tokenEle),&dwRetLen))  
-    {    
-        if (dwRetLen == sizeof(tokenEle))  
-        {  
-            bElevated = tokenEle.TokenIsElevated;    
-        }  
-    }    
-    CloseHandle(hToken);    
-    return bElevated;    
-}  
+#pragma comment(lib,"advapi32.lib")
 
-int main()  
-{  
-	PROCESSENTRY32 pinfo; 
-	HANDLE hProcess,hModule;
+BOOL IsRunasAdmin(HANDLE hProcess)
+{
+	BOOL bElevated = FALSE;
+	HANDLE hToken = NULL;
+	if (!OpenProcessToken(hProcess, TOKEN_QUERY, &hToken))
+		return FALSE;
+	TOKEN_ELEVATION tokenEle;
+	DWORD dwRetLen = 0;
+	if (GetTokenInformation(hToken, TokenElevation, &tokenEle, sizeof(tokenEle), &dwRetLen))
+	{
+		if (dwRetLen == sizeof(tokenEle))
+		{
+			bElevated = tokenEle.TokenIsElevated;
+		}
+	}
+	CloseHandle(hToken);
+	return bElevated;
+}
+
+BOOL CheckProcessauthority()
+{
+	HANDLE hProcessSnap;
+	HANDLE hProcess;
+	PROCESSENTRY32 pe32;
+	DWORD dwPriorityClass;
 	BOOL bRunAsAdmin;
-	hModule = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);  
-	BOOL report = Process32First(hModule, &pinfo);  
-	printf("\n%-20s	 PID	Run as Admin\n","Process");
-	printf("====================	====	============\n");
-	while(report) 
-	{ 
-		printf("%-20s	%4d	",pinfo.szExeFile,pinfo.th32ProcessID); 
-		hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pinfo.th32ProcessID);
-		bRunAsAdmin = IsRunasAdmin(hProcess);  
-		if (bRunAsAdmin)  
-			printf("%-12s\n","Yes");  
+
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hProcessSnap == INVALID_HANDLE_VALUE)
+	{
+		printf("[!]CreateToolhelp32Snapshot Failed.<%d>\n", GetLastError());
+		return(FALSE);
+	}
+
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+	if (!Process32First(hProcessSnap, &pe32))
+	{
+		printf("[!]Process32First Failed.<%d>\n", GetLastError());
+		CloseHandle(hProcessSnap);
+		return(FALSE);
+	}
+	printf("\n%-40s	 PID	Run as Admin\n", "Process");
+	printf("========================================	====	============\n");
+	do
+	{
+		printf("%-40s	%4d	", pe32.szExeFile, pe32.th32ProcessID);
+		hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pe32.th32ProcessID);
+		bRunAsAdmin = IsRunasAdmin(hProcess);
+		if (bRunAsAdmin)
+			printf("%-12s\n", "Yes");
 		else
 			printf("\n");
-		report=Process32Next(hModule, &pinfo);    
-	}
-	CloseHandle(hModule);  
 
-	return 0;  
-}  
+
+	} while (Process32Next(hProcessSnap, &pe32));
+
+	CloseHandle(hProcessSnap);
+	return(TRUE);
+}
+
+int main()
+{
+	CheckProcessauthority();
+	return 0;
+}
+
+
